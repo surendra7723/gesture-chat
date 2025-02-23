@@ -1,0 +1,140 @@
+Import Google Font
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #ffffff 50%, #7a7dfd 50%);
+} */
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #7a7dfd 30%, #ae83f5 70%);
+    background-size: 200% 200%;
+    animation: gradientAnimation 6s ease infinite;
+}
+
+/* Animated Gradient Effect */
+@keyframes gradientAnimation {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.chat-box {
+    background: white;
+    padding: 30px;
+    width: 400px;
+    border-radius: 12px;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.welcome-text {
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.logout-form {
+    text-align: right;
+    margin-bottom: 15px;
+}
+
+
+.logout-btn {
+    background: #f56363;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background: #e05555;
+}
+
+#chat-log {
+    height: 250px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+}
+
+#chat-message-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #f3f3f3;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#chat-message-submit {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 25px;
+    background: #ae83f5;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+#chat-message-submit:hover {
+    background: #9b70f0;
+}
+
+
+.gesture-form {
+    text-align: left;  /* Aligns the button to the left */
+    margin-bottom: 15px;
+}
+
+.gesture-btn {
+    background: #f56363;  /* Same as logout button */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.gesture-btn:hover {
+    background: #e05555; /* Same hover effect as logout button */
+}

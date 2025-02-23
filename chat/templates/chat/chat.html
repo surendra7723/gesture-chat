@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'chat/chat.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="chat-box">
+            <h2>Chat Room</h2>
+            <p class="welcome-text">Welcome, <b>{{ request.user.username }}</b>!</p>
+
+            <form action="{% url 'gesture' %}" method="post" class="gesture-form">
+                {% csrf_token %}
+                <button type="submit" class="gesture-btn">Capture Gesture</button>
+            </form>
+            
+
+            <form action="{% url 'logout' %}" method="post" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+
+            <div id="chat-log">
+                {% for message in messages %}
+                    <p><b>{{ message.sender.username }}:</b> {{ message.content }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="chat-input">
+                <input id="chat-message-input" type="text" placeholder="Type a message...">
+                <button id="chat-message-submit">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = new WebSocket("ws://" + window.location.host + "/ws/chat/");
+    
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            const chatLog = document.querySelector("#chat-log");
+            chatLog.innerHTML += `<p><b>${data.username}:</b> ${data.message}</p>`;
+            chatLog.scrollTop = chatLog.scrollHeight;
+        };
+    
+        document.querySelector("#chat-message-submit").onclick = function() {
+            const messageInput = document.querySelector("#chat-message-input");
+            const message = messageInput.value;
+            if (message.trim() !== "") {
+                socket.send(JSON.stringify({"message": message}));
+                messageInput.value = "";
+            }
+        };
+    
+        document.querySelector(".gesture-btn").onclick = function(event) {
+            event.preventDefault();  // Prevent form submission
+            
+            fetch("{% url 'gesture' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.gesture) {
+                    // Send detected gesture as a chat message
+                    const gestureMessage = `Gesture Detected: ${data.gesture}`;
+                    socket.send(JSON.stringify({"message": gestureMessage}));
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        };
+    </script>
+    
+</body>
+</html>

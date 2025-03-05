@@ -10,6 +10,13 @@ from threading import Thread
 from PIL import Image, ImageTk
 import hashlib
 from tkinter import messagebox
+import pyttsx3  # Add text-to-speech library
+
+# Initialize text-to-speech engine
+tts_engine = pyttsx3.init()
+# You can adjust these settings as needed
+tts_engine.setProperty('rate', 150)  # Speed of speech
+tts_engine.setProperty('volume', 0.9)  # Volume (0 to 1)
 
 # Load gesture recognition model
 model_path = '/home/surendra/Code/College/gesture/Desktop/client/models/model.p'
@@ -129,6 +136,9 @@ class GestureClientApp:
         self.root.geometry("800x600")
         self.root.configure(bg="#f0f0f0")
         
+        # TTS control variable
+        self.tts_enabled = tk.BooleanVar(value=True)
+        
         # Create a header frame for user info and logout
         self.header_frame = tk.Frame(root, bg="#f0f0f0")
         self.header_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
@@ -142,6 +152,16 @@ class GestureClientApp:
             bg="#f0f0f0",
         )
         self.user_info_label.pack(side=tk.LEFT, padx=5)
+        
+        # Add TTS checkbox
+        self.tts_check = tk.Checkbutton(
+            self.header_frame,
+            text="Enable Speech",
+            variable=self.tts_enabled,
+            bg="#f0f0f0",
+            font=("Arial", 10)
+        )
+        self.tts_check.pack(side=tk.LEFT, padx=20)
         
         # Add logout button
         self.logout_button = tk.Button(
@@ -207,10 +227,21 @@ class GestureClientApp:
             frame = tk.Frame(self.buffer_notebook, bg="#f0f0f0")
             self.buffer_notebook.add(frame, text=user)
             
-            label = tk.Label(frame, text="", font=("Arial", 14), 
-                          bg="white", relief=tk.SUNKEN, width=20, height=5, wraplength=200)
-            label.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            buffer_frame = tk.Frame(frame, bg="#f0f0f0")
+            buffer_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+            
+            label = tk.Label(buffer_frame, text="", font=("Arial", 14), 
+                          bg="white", relief=tk.SUNKEN, width=20, height=4, wraplength=200)
+            label.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
             self.users[user]["label"] = label
+            
+            # Add speak buffer button
+            speak_button = ttk.Button(
+                buffer_frame, 
+                text="Speak Buffer", 
+                command=lambda u=user: self.speak_buffer(u)
+            )
+            speak_button.pack(fill=tk.X, pady=5)
         
         # Control buttons
         self.button_frame = tk.Frame(self.right_frame, bg="#f0f0f0")
@@ -236,6 +267,24 @@ class GestureClientApp:
         self.chat_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.chat_text.config(state=tk.DISABLED)
         
+        # Add chat controls
+        self.chat_controls = tk.Frame(self.chat_frame, bg="#f0f0f0")
+        self.chat_controls.pack(fill=tk.X, padx=5, pady=2)
+        
+        self.speak_last_button = ttk.Button(
+            self.chat_controls, 
+            text="Speak Last Message", 
+            command=self.speak_latest_message
+        )
+        self.speak_last_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
+        self.speak_all_button = ttk.Button(
+            self.chat_controls, 
+            text="Speak All Messages", 
+            command=self.speak_chat_history
+        )
+        self.speak_all_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
         # Initialize variables
         self.running = False
         self.last_registered_time = time.time()
@@ -243,6 +292,9 @@ class GestureClientApp:
         self.cap = None
         self.photo = None  # Store the photo reference
         self.status_light_state = "red"  # Track the current state of the status light
+        
+        # Start message receiving thread
+        Thread(target=self.receive_messages, daemon=True).start()
 
     def toggle_user(self):
         """Switch between users"""
@@ -291,6 +343,8 @@ class GestureClientApp:
                 self.chat_text.see(tk.END)
                 self.chat_text.config(state=tk.DISABLED)
                 
+                # Don't speak your own message when sending
+                
                 # Clear the buffer
                 self.users[self.current_user]["buffer"] = ""
                 self.users[self.current_user]["label"].config(text="")
@@ -301,13 +355,16 @@ class GestureClientApp:
                 print("Error sending data:", e)
 
     def append_to_buffer(self, gesture):
-        """Add detected gesture to current user's buffer"""
+        """Add detected gesture to current user's buffer and speak the latest character"""
         if gesture == ' ':
             self.users[self.current_user]["buffer"] += " "
         elif gesture == '.':
             self.users[self.current_user]["buffer"] += "."
         else:
             self.users[self.current_user]["buffer"] += gesture
+            # Optionally speak the detected character
+            if self.tts_enabled.get():
+                Thread(target=self.speak_message, args=(f"Detected {gesture}",), daemon=True).start()
             
         self.users[self.current_user]["label"].config(text=self.users[self.current_user]["buffer"])
 
@@ -445,6 +502,90 @@ class GestureClientApp:
             # Start a new login process
             start_application()
 
+    # Add new TTS methods
+    def speak_message(self, message):
+        """Use TTS to speak a message"""
+        if not self.tts_enabled.get():
+            return
+            
+        try:
+            # Run in a thread to avoid blocking UI
+            def speak():
+                tts_engine.say(message)
+                tts_engine.runAndWait()
+                
+                # Reset status message when done speaking
+                self.root.after_idle(lambda: self.status_label.config(
+                    text="Ready to detect" if not self.running else "Capture started"))
+                
+            # Update status to show speaking
+            self.status_label.config(text="Speaking message...")
+            
+            # Start speaking thread
+            Thread(target=speak, daemon=True).start()
+            
+        except Exception as e:
+            print(f"TTS error: {e}")
+    
+    def speak_buffer(self, user=None):
+        """Speak the buffer content for a specific user or current user"""
+        user = user or self.current_user
+        buffer = self.users[user]["buffer"]
+        
+        if buffer:
+            message = f"{user} buffer says: {buffer}"
+            self.speak_message(message)
+        else:
+            self.speak_message(f"{user} buffer is empty")
+            
+    def speak_latest_message(self):
+        """Speak the latest message in the chat history"""
+        if not self.chat_text.get("1.0", tk.END).strip():
+            self.speak_message("No messages in chat history")
+            return
+            
+        # Get the last line of the chat
+        chat_content = self.chat_text.get("1.0", tk.END)
+        lines = [line for line in chat_content.splitlines() if line.strip()]
+        
+        if not lines:
+            return
+            
+        last_message = lines[-1]
+        self.speak_message(last_message)
+    
+    def speak_chat_history(self):
+        """Speak all messages in the chat history"""
+        chat_content = self.chat_text.get("1.0", tk.END).strip()
+        if not chat_content:
+            self.speak_message("No messages in chat history")
+            return
+            
+        self.speak_message("Chat history: " + chat_content)
+    
+    def receive_messages(self):
+        """Listen for incoming messages from the server"""
+        while True:
+            try:
+                message = client_socket.recv(1024).decode('utf-8')
+                if message:
+                    # Add to chat history
+                    self.root.after_idle(self.update_chat, message)
+                    
+                    # Speak the message if it's not from the current user
+                    if not message.startswith(f"{self.current_user}:"):
+                        self.speak_message(message)
+            except Exception as e:
+                print(f"Error receiving messages: {e}")
+                break
+    
+    def update_chat(self, message):
+        """Thread-safe update of chat history"""
+        self.chat_text.config(state=tk.NORMAL)
+        self.chat_text.insert(tk.END, message + "\n")
+        self.chat_text.see(tk.END)
+        self.chat_text.config(state=tk.DISABLED)
+
 def start_application():
     """Start the application with login flow"""
     # First, show the login window
@@ -473,4 +614,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

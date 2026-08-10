@@ -85,6 +85,63 @@ python -m venv .venv && source .venv/bin/activate && pip install -r requirements
    - Web chat: `http://localhost:8000/`
    - Admin panel: `http://localhost:8000/admin/`
 
+## Desktop App
+
+The desktop app is a standalone peer-to-peer gesture chat client built with Tkinter. It uses a raw TCP socket server for message broadcasting and runs gesture recognition entirely on the client side using OpenCV, MediaPipe, and a trained scikit-learn RandomForest model. Text-to-speech (pyttsx3) is integrated for accessibility.
+
+### Prerequisites
+
+- Python 3.10+
+- Webcam
+- Trained model file (`model.p`) — see note below
+
+### Model Path Configuration
+
+`Desktop/client/client.py` line 22 contains a hardcoded absolute path to the trained model:
+
+```python
+model_path = '/home/surendra/Code/College/gesture/Desktop/client/models/model.p'
+```
+
+Before running, update this to a relative path or set an environment variable so the client can locate `model.p` on any machine.
+
+### Step 1 — Start the TCP Server
+
+```bash
+python Desktop/server/server.py
+```
+
+Expected output:
+```
+[*] Server started on 0.0.0.0:5000
+```
+
+### Step 2 — Start Desktop Clients
+
+In separate terminal windows:
+
+```bash
+python Desktop/client/client.py
+```
+
+### Step 3 — Authenticate
+
+Use the hardcoded demo credentials:
+
+| Username | Password |
+|----------|----------|
+| `user1`  | `password1` |
+| `user2`  | `password2` |
+
+### Step 4 — Operate the Client
+
+1. Click **Start Capture** to activate webcam gesture detection
+2. Show ASL gestures (A–Z, 0–9, space, period) to the camera
+3. Detected characters accumulate in the active user's buffer
+4. Click **Send Message** to broadcast the buffer to all connected clients via TCP
+5. Click **Switch User** to toggle between User 1 and User 2
+6. Enable the **Speech** checkbox to activate TTS for detected characters and incoming messages
+
 ## API Overview
 
 **Base URL:** `http://localhost:8000/`

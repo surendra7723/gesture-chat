@@ -11,6 +11,12 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+os.environ.setdefault("OPENCV_VIDEOIO_DEBUG", "0")
+os.environ.setdefault("OPENCV_LOG_LEVEL", "0")
+os.environ.setdefault("MEDIAPIPE_DEBUG", "0")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

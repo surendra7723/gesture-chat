@@ -31,6 +31,9 @@ staticfiles/
 .DS_Store
 Thumbs.db
 
+# Kilo
+.kilo/
+
 # ML Models
 *.pkl
 *.p

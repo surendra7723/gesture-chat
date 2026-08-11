@@ -60,10 +60,11 @@ class GestureHistorySerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     """Serializer for Message model"""
     sender_username = serializers.CharField(source='sender.username', read_only=True)
+    room_id = serializers.IntegerField(source='room.id', read_only=True)
     
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'sender_username', 'content', 'timestamp']
+        fields = ['id', 'room', 'room_id', 'sender', 'sender_username', 'content', 'timestamp']
         read_only_fields = ['id', 'sender', 'timestamp']
 
 

@@ -208,20 +208,40 @@ class MessageTests(APITestBase):
     def test_create_message(self):
         """Test creating a message"""
         self.authenticate()
-        data = {'content': 'Hello World'}
+        room = ChatRoom.objects.create(name='Test Room', created_by=self.user)
+        RoomMembership.objects.create(room=room, user=self.user, is_admin=True)
+        data = {'content': 'Hello World', 'room': room.id}
         response = self.client.post(reverse('message-list'), data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['content'], 'Hello World')
         self.assertEqual(response.data['sender_username'], 'testuser')
+        self.assertEqual(response.data['room'], room.id)
     
     def test_list_messages(self):
         """Test listing messages"""
         self.authenticate()
-        Message.objects.create(sender=self.user, content='Test message')
+        room = ChatRoom.objects.create(name='Test Room', created_by=self.user)
+        RoomMembership.objects.create(room=room, user=self.user, is_admin=True)
+        Message.objects.create(sender=self.user, room=room, content='Test message')
         
         response = self.client.get(reverse('message-list'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
+    
+    def test_list_messages_filtered_by_room(self):
+        """Test listing messages filtered by room"""
+        self.authenticate()
+        room1 = ChatRoom.objects.create(name='Room 1', created_by=self.user)
+        room2 = ChatRoom.objects.create(name='Room 2', created_by=self.user)
+        RoomMembership.objects.create(room=room1, user=self.user, is_admin=True)
+        RoomMembership.objects.create(room=room2, user=self.user, is_admin=True)
+        Message.objects.create(sender=self.user, room=room1, content='Room 1 message')
+        Message.objects.create(sender=self.user, room=room2, content='Room 2 message')
+        
+        response = self.client.get(reverse('message-list'), {'room_id': room1.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['content'], 'Room 1 message')
 
 
 class GestureHistoryTests(APITestBase):

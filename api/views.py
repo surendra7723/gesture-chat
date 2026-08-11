@@ -271,8 +271,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
     def messages(self, request, pk=None):
         """Get messages in a room"""
         room = self.get_object()
-        # For now, return all messages (TODO: filter by room when room field added to Message)
-        messages = Message.objects.all()[:50]
+        messages = Message.objects.filter(room=room).order_by('-timestamp')[:50]
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
 
@@ -285,8 +284,16 @@ class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Message.objects.all().order_by('-timestamp')
+        queryset = Message.objects.all().order_by('-timestamp')
+        room_id = self.request.query_params.get('room_id')
+        if room_id:
+            queryset = queryset.filter(room_id=room_id)
+        return queryset
     
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        room_id = self.request.data.get('room')
+        if room_id:
+            serializer.save(sender=self.request.user, room_id=room_id)
+        else:
+            serializer.save(sender=self.request.user)
 

@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',  # For shell_plus
 ]
 
 MIDDLEWARE = [
@@ -224,3 +225,10 @@ SWAGGER_SETTINGS = {
     'JSON_EDITOR': True,
 }
 
+SHELL_PLUS = "ipython"
+CSRF_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+]

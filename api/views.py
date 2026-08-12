@@ -17,6 +17,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 from chat.models import Message
 from .models import GestureHistory, ChatRoom, RoomMembership, UserProfile
 from .serializers import (
@@ -47,6 +50,23 @@ HANDS = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_co
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=UserRegistrationSerializer,
+        responses={
+            201: openapi.Response(
+                description="User created successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'user': openapi.Schema(type=openapi.TYPE_OBJECT, description="User data"),
+                        'refresh': openapi.Schema(type=openapi.TYPE_STRING, description="JWT refresh token"),
+                        'access': openapi.Schema(type=openapi.TYPE_STRING, description="JWT access token"),
+                    }
+                )
+            ),
+            400: 'Validation error'
+        }
+    )
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
@@ -63,6 +83,30 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING, description="Username"),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, description="Password"),
+            },
+            required=['username', 'password']
+        ),
+        responses={
+            200: openapi.Response(
+                description="Login successful",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'user': openapi.Schema(type=openapi.TYPE_OBJECT, description="User data"),
+                        'refresh': openapi.Schema(type=openapi.TYPE_STRING, description="JWT refresh token"),
+                        'access': openapi.Schema(type=openapi.TYPE_STRING, description="JWT access token"),
+                    }
+                )
+            ),
+            401: 'Invalid credentials'
+        }
+    )
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
@@ -81,6 +125,15 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'refresh': openapi.Schema(type=openapi.TYPE_STRING, description="Refresh token to blacklist (optional)"),
+            }
+        ),
+        responses={200: 'Logout successful'}
+    )
     def post(self, request):
         try:
             refresh_token = request.data.get('refresh')
@@ -95,6 +148,9 @@ class LogoutView(APIView):
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        responses={200: UserSerializer}
+    )
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
@@ -110,6 +166,9 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return UserProfile.objects.filter(user=self.request.user)
     
+    @swagger_auto_schema(method='get', responses={200: UserProfileSerializer})
+    @swagger_auto_schema(method='put', request_body=UserProfileSerializer, responses={200: UserProfileSerializer, 400: 'Validation error'})
+    @swagger_auto_schema(method='patch', request_body=UserProfileSerializer, responses={200: UserProfileSerializer, 400: 'Validation error'})
     @action(detail=False, methods=['get', 'put', 'patch'])
     def me(self, request):
         """Get or update current user's profile"""
@@ -183,6 +242,13 @@ def process_gesture_image(image_data):
 class PredictGestureView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        request_body=GesturePredictionSerializer,
+        responses={
+            200: GesturePredictionResponseSerializer,
+            400: 'Bad request'
+        }
+    )
     def post(self, request):
         serializer = GesturePredictionSerializer(data=request.data)
 
@@ -286,6 +352,19 @@ class MessageViewSet(viewsets.ModelViewSet):
         if room_id:
             queryset = queryset.filter(room_id=room_id)
         return queryset
+    
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'room_id',
+                openapi.IN_QUERY,
+                description="Filter messages by room ID",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
         room_id = self.request.data.get('room')

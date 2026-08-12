@@ -138,13 +138,11 @@ def process_gesture_image(image_data):
         image_bytes = base64.b64decode(image_data)
         image = Image.open(io.BytesIO(image_bytes))
         
-        # Convert to OpenCV format
         img_array = np.array(image)
-        img_rgb = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB)
+        if img_array.ndim == 3 and img_array.shape[-1] == 4:
+            img_array = img_array[..., :3]
         
-        # Process with MediaPipe
-        results = HANDS.process(img_rgb)
+        results = HANDS.process(img_array)
         
         if not results.multi_hand_landmarks:
             return None, "No hand detected"

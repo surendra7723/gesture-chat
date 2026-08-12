@@ -10,3 +10,4 @@
 
 django-extensions==4.1
 ipython==9.16.1
+ipdb==0.13.13

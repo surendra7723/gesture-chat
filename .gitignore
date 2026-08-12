@@ -56,9 +56,14 @@ logs/
 # Test coverage
 htmlcov/
 .coverage
+.coverage.*
 .pytest_cache/
 
-# Node
+# Linters
+.mypy_cache/
+.ruff_cache/
+.tox/
+*.egg
 node_modules/
 package-lock.json
 

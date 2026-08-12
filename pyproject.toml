@@ -71,3 +71,9 @@ dependencies = [
     "django-cors-headers==4.3.1",
     "drf-yasg==1.21.7",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "django-extensions==4.1",
+    "ipython==9.16.1",
+]

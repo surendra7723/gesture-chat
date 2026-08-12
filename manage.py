@@ -6,7 +6,7 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatapp.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatapp.settings.development')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -15,6 +15,8 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    if 'shell' in sys.argv:
+        sys.argv[sys.argv.index('shell')] = 'shell_plus'
     execute_from_command_line(sys.argv)
 
 

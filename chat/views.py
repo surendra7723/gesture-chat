@@ -3,28 +3,25 @@ import cv2
 
 import pickle
 import numpy as np
-from django.http import JsonResponse
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
 from .models import Message
-from django.contrib.auth import logout
-from django.http import JsonResponse
 
-@login_required
-def chat_view(request):
-    print(request)
-    messages = Message.objects.order_by("-timestamp")[:50]  # Load last 50 messages
-    return render(request, "chat/chat.html", {"messages": messages})
 
-def logout_view(request):
-    if request.method == "POST":
-        logout(request)
-        return JsonResponse({"message": "Logged out successfully!"})
-    else:
-        return JsonResponse({"error": "Method Not Allowed"}, status=405)
-    
+class ChatView(LoginRequiredMixin, TemplateView):
+    template_name = "chat/chat.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['messages'] = Message.objects.order_by("-timestamp")[:50]
+        return context
+
 
 # Load the trained model
 MODEL_PATH = "./model.p"
@@ -36,15 +33,16 @@ with open(MODEL_PATH, "rb") as model_file:
 # OpenCV: Initialize webcam
 cap = cv2.VideoCapture(0)
 
-@csrf_exempt
-def capture_gesture(request):
-    if request.method == "POST":
+@method_decorator(csrf_exempt, name='dispatch')
+class CaptureGestureView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
         try:
             # Capture a frame from the webcam
             ret, frame = cap.read()
-            # breakpoint()
             if not ret:
-                return JsonResponse({"error": "Failed to capture image"}, status=500)
+                return Response({"error": "Failed to capture image"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # Preprocess frame (convert to grayscale, resize, flatten, etc.)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -54,14 +52,8 @@ def capture_gesture(request):
             # Predict the gesture
             prediction = model.predict(features)
             gesture_name = str(prediction[0])  # Convert numpy result to string
-            
-            return JsonResponse({"gesture": gesture_name})
-        
+
+            return Response({"gesture": gesture_name})
+
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    return JsonResponse({"message": "Send a POST request to capture a gesture."})
-
-
-
-    
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

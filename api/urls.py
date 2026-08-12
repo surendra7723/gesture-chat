@@ -25,12 +25,12 @@ router.register(r'rooms', views.ChatRoomViewSet, basename='chatroom')
 router.register(r'messages', views.MessageViewSet, basename='message')
 
 urlpatterns = [
-    path('auth/register/', views.register_user, name='register'),
-    path('auth/login/', views.login_user, name='login'),
-    path('auth/logout/', views.logout_user, name='logout'),
+    path('auth/register/', views.RegisterView.as_view(), name='register'),
+    path('auth/login/', views.LoginView.as_view(), name='login'),
+    path('auth/logout/', views.LogoutView.as_view(), name='logout'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/user/', views.current_user, name='current_user'),
-    path('gestures/predict/', views.predict_gesture, name='predict-gesture'),
+    path('auth/user/', views.CurrentUserView.as_view(), name='current_user'),
+    path('gestures/predict/', views.PredictGestureView.as_view(), name='predict-gesture'),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('', include(router.urls)),

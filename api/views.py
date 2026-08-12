@@ -8,7 +8,8 @@ from PIL import Image
 from datetime import datetime
 
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -43,60 +44,60 @@ HANDS = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_co
 
 # ============= Authentication Views =============
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register_user(request):
-    """Register a new user"""
-    serializer = UserRegistrationSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'user': UserSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user': UserSerializer(user).data,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def login_user(request):
-    """Login user and return JWT tokens"""
-    username = request.data.get('username')
-    password = request.data.get('password')
-    
-    user = authenticate(username=username, password=password)
-    if user:
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'user': UserSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        })
-    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = authenticate(username=username, password=password)
+        if user:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user': UserSerializer(user).data,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            })
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def logout_user(request):
-    """Logout user (blacklist token if using token blacklist)"""
-    try:
-        refresh_token = request.data.get('refresh')
-        if refresh_token:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-        return Response({'message': 'Successfully logged out'})
-    except Exception:
-        return Response({'message': 'Logged out'})
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            return Response({'message': 'Successfully logged out'})
+        except Exception:
+            return Response({'message': 'Logged out'})
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def current_user(request):
-    """Get current user details"""
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
 # ============= User Profile Views =============
@@ -181,39 +182,37 @@ def process_gesture_image(image_data):
         return None, str(e)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def predict_gesture(request):
-    """Predict gesture from uploaded image"""
-    serializer = GesturePredictionSerializer(data=request.data)
-    
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    image_data = serializer.validated_data['image']
-    save_history = serializer.validated_data.get('save_history', True)
-    
-    gesture, confidence = process_gesture_image(image_data)
-    
-    if gesture is None:
-        return Response({'error': confidence}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Save to history if requested
-    if save_history:
-        GestureHistory.objects.create(
-            user=request.user,
-            gesture=gesture,
-            confidence=confidence
-        )
-    
-    response_data = {
-        'gesture': gesture,
-        'confidence': confidence,
-        'timestamp': datetime.now()
-    }
-    
-    response_serializer = GesturePredictionResponseSerializer(response_data)
-    return Response(response_serializer.data)
+class PredictGestureView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = GesturePredictionSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        image_data = serializer.validated_data['image']
+        save_history = serializer.validated_data.get('save_history', True)
+
+        gesture, confidence = process_gesture_image(image_data)
+
+        if gesture is None:
+            return Response({'error': confidence}, status=status.HTTP_400_BAD_REQUEST)
+
+        if save_history:
+            GestureHistory.objects.create(
+                user=request.user,
+                gesture=gesture,
+                confidence=confidence
+            )
+
+        response_data = {
+            'gesture': gesture,
+            'confidence': confidence,
+            'timestamp': datetime.now()
+        }
+        response_serializer = GesturePredictionResponseSerializer(response_data)
+        return Response(response_serializer.data)
 
 
 class GestureHistoryViewSet(viewsets.ReadOnlyModelViewSet):

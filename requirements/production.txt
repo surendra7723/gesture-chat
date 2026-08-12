@@ -1,0 +1,9 @@
+# Production dependencies — same runtime set as base.txt with NO dev-only
+# tooling (django-extensions, ipython are excluded).
+#
+# Install with:  uv pip install -r requirements/production.txt
+# Then set:      DJANGO_SETTINGS_MODULE=chatapp.settings.production
+# And provide:   DJANGO_SECRET_KEY, ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS,
+#                CSRF_TRUSTED_ORIGINS, REDIS_URL via the environment.
+
+-r base.txt

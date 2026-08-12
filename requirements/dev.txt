@@ -1,0 +1,12 @@
+# Development dependencies — extends base.txt with dev-only tooling.
+# Install with:  uv pip install -r requirements/dev.txt
+#
+# Includes django-extensions + ipython for shell_plus (manage.py auto-
+# rewrites `manage.py shell` to `shell_plus`).
+#
+# CI does NOT use this file — it installs base.txt only.
+
+-r base.txt
+
+django-extensions==4.1
+ipython==9.16.1

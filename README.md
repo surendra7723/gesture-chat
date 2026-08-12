@@ -6,7 +6,7 @@ AI-powered communication translating ASL gestures to text/speech via Django + Me
 
  ```bash
  python -m venv .venv && source .venv/bin/activate
- uv pip install -r requirements.txt -r requirements-api.txt
+ uv pip install -r requirements/dev.txt
  python manage.py migrate
  python manage.py runserver
  ```

@@ -25,14 +25,14 @@ jobs:
         run: uv venv
 
       - name: Install dependencies
-        run: uv pip install -r requirements.txt -r requirements-api.txt
+        run: uv pip install -r requirements/base.txt
 
       - name: Run migrations
         env:
-          DJANGO_SETTINGS_MODULE: chatapp.settings
+          DJANGO_SETTINGS_MODULE: chatapp.settings.development
         run: uv run python manage.py migrate
 
       - name: Run tests
         env:
-          DJANGO_SETTINGS_MODULE: chatapp.settings
+          DJANGO_SETTINGS_MODULE: chatapp.settings.development
         run: uv run python manage.py test
